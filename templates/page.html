@@ -1,0 +1,110 @@
+<!DOCTYPE html> 
+<html lang="en">        
+<head>       
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formatter</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>         
+</head>        
+<body>
+   <div id="homelink" style="display: flex; justify-content: center;">
+      <a href="/">Back to Home</a>
+   </div>
+   <div id="myDiv" style="display: flex; justify-content: center;"></div>
+   <form id="inputForm" method="post" style="display: flex; justify-content: center;">{% csrf_token %}
+      <input type="text" id="author_name" placeholder="Comment author name">
+      <input type="text" id="content" placeholder="Comment content">
+      <input type="submit" value="Submit">
+    </form>
+    <script>    
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      const request_url = window.location.search;
+      
+      const p = new URLSearchParams(request_url);
+
+      const post_id = p.get("id");
+
+      $(document).ready(function() {
+         // Make an Ajax request to the API when the page first loads.
+         $.ajax({
+         url: "/posts/get_all?filters=id=" + post_id,
+         type: "GET",
+         dataType: 'json',
+         contentType: 'application/json',
+         cors: false ,
+         headers: {
+            'Access-Control-Allow-Origin': '*',
+            'X-CSRFToken': csrftoken
+          },
+         success: function(data) {
+            var list = $("<ul>");
+            $.each(data, function(index, item) {
+              var li = $("<li>");
+              var title = item.title;
+              var author_name = item.author_name;
+              var content = item.content;
+              
+              li.append($("<p>").text("Title: "+ title));
+              li.append($("<p>").text("Author name: " + author_name));
+              li.append($("<p>").text("Content: " + content));
+               li.append($("<h3>").text("Comment: "));
+              var comment_post_id = item.id;
+               $.ajax({
+               url: "/comments/" + comment_post_id + "/get_all?sort_order_attribute=created_datetime&sort_order_ascending=false",
+               method: "GET",
+               dataType: 'json',
+               contentType: 'application/json',
+               cors: false ,
+               headers: {
+                  'Access-Control-Allow-Origin': '*',
+                  'X-CSRFToken': csrftoken
+               },
+               success: function(comments) {
+                  // Iterate over the comments and append each comment to the div.
+                  $.each(comments, function(index, comment) {
+                     li.append($("<p style='margin-right: 100px;'>").text("User name: " + comment.author_name + ": " + comment.content));
+                  });
+               },
+               error: function(error) {
+                  console.log(error);
+               }
+               });
+
+            list.append(li);
+            $('#myDiv').html(list);
+            
+         }
+         )}
+      });
+      });
+      
+      $('#inputForm').submit(function(event) {
+        event.preventDefault();
+        var author_name = $('#author_name').val();
+        var content = $('#content').val();
+        // Make an Ajax request to the API to add the dictionary.
+
+        $.ajax({
+          url: "comments/create",
+          type: "POST",
+         cors: false ,
+         headers: {
+            'Access-Control-Allow-Origin': '*',
+            'X-CSRFToken': csrftoken
+          },
+          data: {
+            post_id: post_id,
+            author_name: author_name,
+            content: content
+          },
+          success: function(data) {
+            // Reload the page to show the new dictionary.
+            location.reload();
+          }
+        });
+      });
+
+      
+    </script>        
+</body>              
+</html>
